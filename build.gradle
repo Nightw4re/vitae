@@ -1,0 +1,178 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.1.21'
+    id 'jacoco'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = "${minecraft_version}-${mod_version}"
+group = mod_group_id
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+    exclude("**/*.bbmodel")
+    exclude("src/generated/**/.cache")
+}
+
+repositories {
+    maven {
+        name = "KubeJS"
+        url = "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+    maven {
+        name = "GeckoLib"
+        url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
+        content { includeGroup "software.bernie.geckolib" }
+    }
+    maven {
+        name = "JitPack"
+        url = "https://jitpack.io"
+        content { includeGroup "com.github.rtyley" }
+    }
+}
+
+base {
+    archivesName = "${mod_id}-neoforge"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        systemProperty 'ignoreList', 'bootstraplauncher,mixinextras-neoforge,client-extra,neoforge-'
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+    gameTestServer {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+    data {
+        arguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+
+    implementation("software.bernie.geckolib:geckolib-neoforge-1.21.1:${geckolib_version}") {
+        exclude group: 'cpw.mods', module: 'bootstraplauncher'
+    }
+
+    compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    localRuntime "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+        minecraft_version: minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        neo_version: neo_version,
+        loader_version_range: loader_version_range,
+        mod_id: mod_id,
+        mod_name: mod_name,
+        mod_license: mod_license,
+        mod_version: mod_version,
+    ]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('test', Test).configure {
+    jvmArgs '-ea'
+    failOnNoDiscoveredTests = false
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+tasks.register('printJacocoAgentPath') {
+    doLast {
+        println(configurations.jacocoAgent.singleFile.absolutePath)
+    }
+}
+
+tasks.register('coverageReport', JacocoReport) {
+    executionData fileTree(projectDir) {
+        include 'out/jacoco.exec'
+    }
+    classDirectories.setFrom(fileTree('out/classes') {
+        include '**/*.class'
+        exclude '**/testsupport/**'
+    })
+    sourceDirectories.setFrom(files('src/main/java'))
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/html')
+        xml.outputLocation = layout.buildDirectory.file('reports/jacoco/jacoco.xml')
+    }
+    onlyIf {
+        file('out/jacoco.exec').exists()
+    }
+}
+
+tasks.register('coverageVerification', JacocoCoverageVerification) {
+    executionData fileTree(projectDir) {
+        include 'out/jacoco.exec'
+    }
+    classDirectories.setFrom(fileTree('out/classes') {
+        include '**/*.class'
+        exclude '**/testsupport/**'
+    })
+    sourceDirectories.setFrom(files('src/main/java'))
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+    onlyIf {
+        file('out/jacoco.exec').exists()
+    }
+}

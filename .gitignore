@@ -1,0 +1,31 @@
+# Node
+node_modules/
+package-lock.json
+
+# Local tool cache (JaCoCo jars etc.)
+.cache/
+
+# Java / IDE
+out/
+build/
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Gradle
+.gradle/
+local.properties
+
+# NeoForge / Minecraft dev
+runs/
+run/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*

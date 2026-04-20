@@ -1,0 +1,100 @@
+package com.vitae.registry;
+
+import com.vitae.data.EntityDefinition;
+import com.vitae.data.EntityDefinitionLoader;
+import com.vitae.data.NpcDefinition;
+import com.vitae.data.NpcDefinitionLoader;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.ProfilerFiller;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+/**
+ * Loads and caches all Vitae entity and NPC definitions from active datapacks.
+ *
+ * <p>Implements {@link PreparableReloadListener} so it is registered via
+ * {@code AddReloadListenerEvent} and reloaded on every {@code /reload}.
+ */
+public final class VitaeRegistry implements PreparableReloadListener {
+
+    private static final VitaeRegistry INSTANCE = new VitaeRegistry();
+
+    private static final String ENTITY_PREFIX = "vitae/entities";
+    private static final String NPC_PREFIX    = "vitae/npcs";
+    private static final String SUFFIX        = ".json";
+
+    private final Map<ResourceLocation, EntityDefinition> entities = new HashMap<>();
+    private final Map<ResourceLocation, NpcDefinition>    npcs     = new HashMap<>();
+
+    private VitaeRegistry() {}
+
+    public static VitaeRegistry get() {
+        return INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Void> reload(
+            PreparationBarrier barrier,
+            ResourceManager manager,
+            ProfilerFiller prepareProfiler,
+            ProfilerFiller applyProfiler,
+            Executor backgroundExecutor,
+            Executor gameExecutor
+    ) {
+        return CompletableFuture
+                .supplyAsync(() -> loadAll(manager), backgroundExecutor)
+                .thenCompose(barrier::wait)
+                .thenAcceptAsync(data -> {
+                    entities.clear();
+                    entities.putAll(data.entities());
+                    npcs.clear();
+                    npcs.putAll(data.npcs());
+                }, gameExecutor);
+    }
+
+    private LoadedData loadAll(ResourceManager manager) {
+        Map<ResourceLocation, EntityDefinition> loadedEntities = new HashMap<>();
+        Map<ResourceLocation, NpcDefinition>    loadedNpcs     = new HashMap<>();
+
+        manager.listResources(ENTITY_PREFIX, path -> path.getPath().endsWith(SUFFIX))
+                .forEach((location, resource) -> {
+                    try (InputStream stream = resource.open()) {
+                        String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                        loadedEntities.put(location, EntityDefinitionLoader.parse(json));
+                    } catch (IOException | IllegalArgumentException e) {
+                        System.err.println("[Vitae] Failed to load entity definition " + location + ": " + e.getMessage());
+                    }
+                });
+
+        manager.listResources(NPC_PREFIX, path -> path.getPath().endsWith(SUFFIX))
+                .forEach((location, resource) -> {
+                    try (InputStream stream = resource.open()) {
+                        String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                        loadedNpcs.put(location, NpcDefinitionLoader.parse(json));
+                    } catch (IOException | IllegalArgumentException e) {
+                        System.err.println("[Vitae] Failed to load NPC definition " + location + ": " + e.getMessage());
+                    }
+                });
+
+        return new LoadedData(loadedEntities, loadedNpcs);
+    }
+
+    public EntityDefinition getEntity(ResourceLocation id) { return entities.get(id); }
+    public NpcDefinition    getNpc(ResourceLocation id)    { return npcs.get(id); }
+    public Map<ResourceLocation, EntityDefinition> getEntities() { return Map.copyOf(entities); }
+    public Map<ResourceLocation, NpcDefinition>    getNpcs()     { return Map.copyOf(npcs); }
+
+    private record LoadedData(
+            Map<ResourceLocation, EntityDefinition> entities,
+            Map<ResourceLocation, NpcDefinition>    npcs
+    ) {}
+}

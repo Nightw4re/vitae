@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "run:client",
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "npm: run:client",
+			"detail": "gradlew runClient"
+		}
+	]
+}

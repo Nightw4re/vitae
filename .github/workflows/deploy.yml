@@ -1,0 +1,80 @@
+name: Deploy
+
+env:
+  MC_VERSION: 1.21.1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'gradle.properties'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version changed
+        id: version_check
+        run: |
+          CURRENT=$(grep '^mod_version' gradle.properties | cut -d= -f2)
+          PREVIOUS=$(git show HEAD~1:gradle.properties 2>/dev/null | grep '^mod_version' | cut -d= -f2 || echo "")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Java 21
+        if: steps.version_check.outputs.changed == 'true'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Generate changelog
+        if: steps.version_check.outputs.changed == 'true'
+        id: changelog
+        uses: orhun/git-cliff-action@c93ef52f3d0ddcdcc9bd5447d98d458a11cd4f72 # v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Build
+        if: steps.version_check.outputs.changed == 'true'
+        run: gradle build --no-daemon
+
+      - name: Create GitHub Release
+        if: steps.version_check.outputs.changed == 'true'
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
+        with:
+          tag_name: v${{ steps.version_check.outputs.current }}
+          name: Vitae NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
+          body: ${{ steps.changelog.outputs.content }}
+          files: build/libs/vitae-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
+
+      - name: Publish to Modrinth
+        if: steps.version_check.outputs.changed == 'true'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          files: build/libs/vitae-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
+          name: Vitae NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
+          version: ${{ steps.version_check.outputs.current }}
+          version-type: release
+          changelog: ${{ steps.changelog.outputs.content }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          java: 21

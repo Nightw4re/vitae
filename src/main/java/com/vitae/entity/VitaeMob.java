@@ -1,0 +1,49 @@
+package com.vitae.entity;
+
+import com.vitae.animation.VitaeAnimationController;
+import com.vitae.data.EntityDefinition;
+import com.vitae.data.PhaseDefinition;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.level.Level;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+/**
+ * Base class for all Vitae-managed entities.
+ *
+ * <p>Behaviour is driven entirely by an {@link EntityDefinition} loaded from a datapack JSON.
+ * Subclass or instantiate dynamically via the Vitae registry — do not hardcode entities here.
+ */
+public class VitaeMob extends PathfinderMob implements GeoEntity {
+
+    private final EntityDefinition definition;
+    private final AnimatableInstanceCache animatableCache = GeckoLibUtil.createInstanceCache(this);
+
+    protected VitaeMob(EntityType<? extends VitaeMob> type, Level level, EntityDefinition definition) {
+        super(type, level);
+        this.definition = definition;
+    }
+
+    public EntityDefinition getDefinition() {
+        return definition;
+    }
+
+    /** Returns the currently active phase based on the entity's health percentage. */
+    public PhaseDefinition getCurrentPhase() {
+        float healthPercent = this.getHealth() / this.getMaxHealth();
+        return definition.getPhaseForHealth(healthPercent);
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
+        registrar.add(VitaeAnimationController.create(this, definition));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return animatableCache;
+    }
+}
