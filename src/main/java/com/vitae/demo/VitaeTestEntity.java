@@ -153,8 +153,12 @@ public class VitaeTestEntity extends Vindicator {
         if (definition.deathBehavior() == null || !definition.deathBehavior().spawnLootChest()) {
             return;
         }
-        if (definition.lootTable() == null || definition.lootTable().isBlank() || !(level() instanceof ServerLevel serverLevel)) {
+        if (!(level() instanceof ServerLevel serverLevel)) {
             return;
+        }
+        String lootTableId = definition.lootTable();
+        if (lootTableId == null || lootTableId.isBlank()) {
+            lootTableId = "vitae:entities/angry_boy";
         }
 
         BlockPos chestPos = blockPosition().above();
@@ -171,7 +175,7 @@ public class VitaeTestEntity extends Vindicator {
             return;
         }
 
-        ResourceKey<LootTable> lootKey = ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.parse(definition.lootTable()));
+        ResourceKey<LootTable> lootKey = ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.parse(lootTableId));
         chest.setLootTable(lootKey, serverLevel.getRandom().nextLong());
         chest.unpackLootTable(null);
     }

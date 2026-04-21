@@ -48,6 +48,7 @@ public final class VitaeDemoDefinition {
               "on_death": {
                 "spawn_loot_chest": true
               },
+              "loot_table": "vitae:entities/angry_boy",
               "combat": {
                 "basic_melee_enabled": true,
                 "basic_melee_cooldown_ticks": 20,

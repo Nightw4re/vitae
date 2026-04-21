@@ -43,6 +43,7 @@
     "overlay": "PROGRESS",
     "text": "Angry Boy"
   },
+  "loot_table": "vitae:entities/angry_boy",
   "on_death": {
     "spawn_loot_chest": true
   }
