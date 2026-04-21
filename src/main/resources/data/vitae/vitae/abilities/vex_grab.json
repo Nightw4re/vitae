@@ -1,0 +1,29 @@
+{
+  "id": "vitae:vex_grab",
+  "type": "sequence",
+  "cooldown_ticks": 600,
+  "condition": {
+    "min_health_percent": 0.0,
+    "max_health_percent": 1.0,
+    "chance": 1.0
+  },
+  "steps": [
+    {
+      "ability": "spawn_entity",
+      "parameters": {
+        "entity_id": "minecraft:vex",
+        "invulnerable": false,
+        "no_ai": true
+      },
+      "delay_ticks": 0
+    },
+    {
+      "ability": "carry_target",
+      "parameters": {
+        "height_offset": 6.0,
+        "duration_ticks": 200
+      },
+      "delay_ticks": 0
+    }
+  ]
+}

@@ -20,6 +20,8 @@ import software.bernie.geckolib.animation.RawAnimation;
 public final class VitaeAnimationController {
 
     private static final String IDLE = "animation.entity.idle";
+    private static final String INTRO = "animation.entity.intro";
+    private static final String OUTRO = "animation.entity.outro";
     private static final String CONTROLLER_NAME = "vitae_controller";
 
     private VitaeAnimationController() {}
@@ -37,6 +39,16 @@ public final class VitaeAnimationController {
     }
 
     private static PlayState handleAnimation(AnimationState<VitaeMob> state, VitaeMob entity) {
+        if (entity instanceof net.minecraft.world.entity.LivingEntity livingEntity && livingEntity.deathTime > 0) {
+            state.getController().setAnimation(RawAnimation.begin().thenPlay(OUTRO));
+            return PlayState.CONTINUE;
+        }
+
+        if (entity.hasIntroAnimationPending()) {
+            state.getController().setAnimation(RawAnimation.begin().thenPlay(entity.getDefinition().introAnimation()));
+            return PlayState.CONTINUE;
+        }
+
         PhaseDefinition phase = entity.getCurrentPhase();
         String animName = phase != null
                 ? "animation.entity." + phase.id()

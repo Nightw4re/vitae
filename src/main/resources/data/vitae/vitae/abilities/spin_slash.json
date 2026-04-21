@@ -1,0 +1,14 @@
+{
+  "id": "vitae:spin_slash",
+  "type": "spin_slash",
+  "cooldown_ticks": 0,
+  "condition": {
+    "min_health_percent": 0.0,
+    "max_health_percent": 0.5,
+    "chance": 1.0
+  },
+  "parameters": {
+    "damage": 1.25,
+    "radius": 3.0
+  }
+}
