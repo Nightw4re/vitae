@@ -63,12 +63,12 @@ jobs:
           body: ${{ steps.changelog.outputs.content }}
           files: build/libs/vitae-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
 
-      - name: Publish to Modrinth
+      - name: Publish to CurseForge
         if: steps.version_check.outputs.changed == 'true'
         uses: Kir-Antipov/mc-publish@v3.3
         with:
-          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
 
           files: build/libs/vitae-neoforge-${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}.jar
           name: Vitae NeoForge v${{ env.MC_VERSION }}-${{ steps.version_check.outputs.current }}
