@@ -166,6 +166,9 @@ npm run run:client  # launch Minecraft client
 npm run run:server  # launch Minecraft server
 ```
 
+If you find a bug or want to request a feature, please open an issue at:
+https://github.com/Nightw4re/vitae/issues
+
 ## License
 
 MIT
