@@ -22,8 +22,8 @@ Entities are defined in your datapack under `data/<namespace>/vitae/entities/`.
 
 ```json
 {
-  "model": "mypack:geo/jaffa_warrior.geo.json",
-  "animations": "mypack:animations/jaffa_warrior.animation.json",
+  "model": "mypack:geo/angry_boy.geo.json",
+  "animations": "mypack:animations/angry_boy.animation.json",
   "attributes": {
     "max_health": 200,
     "movement_speed": 0.3,
@@ -40,7 +40,7 @@ Entities are defined in your datapack under `data/<namespace>/vitae/entities/`.
     {
       "id": "phase_2",
       "health_threshold": 0.5,
-      "model": "mypack:geo/jaffa_warrior_enraged.geo.json",
+      "model": "mypack:geo/angry_boy_enraged.geo.json",
       "scale": 1.4,
       "transition": {
         "animation": "phase_2_transition",
@@ -59,9 +59,36 @@ Entities are defined in your datapack under `data/<namespace>/vitae/entities/`.
     "return_to_spawn": true,
     "animation": "reset_idle"
   },
-  "loot_table": "mypack:entities/jaffa_warrior"
+  "loot_table": "mypack:entities/angry_boy"
 }
 ```
+
+## Built-in Test Entity
+
+The mod includes a built-in demo boss registered as `vitae:angry_boy`. It is intended for local testing and validation of the spawn pipeline.
+By default it renders as an oversized `grass_block`, so you can verify spawning immediately without creating custom assets first.
+
+All three demo spawn methods are always available:
+
+- `/vitae spawn_angry_boy`
+- `vitae:angry_boy_spawn_egg`
+- `vitae:angry_boy_one_time_spawner`
+
+The one-time spawner is a block that looks like a vanilla spawner. Place it in the world, then right-click it with an empty hand to cycle its activation distance between preset values. When a player enters range, it spawns one `angry_boy` and destroys itself.
+
+External spell mods can be integrated through the optional `external_spell` ability type:
+```json
+{
+  "id": "spell_burst",
+  "type": "external_spell",
+  "cooldown_ticks": 200,
+  "parameters": {
+    "provider_id": "ars_nouveau",
+    "spell_id": "ars_nouveau:amplify_burst"
+  }
+}
+```
+Vitae will only execute it if a matching provider bridge is present at runtime.
 
 ## Boss System
 

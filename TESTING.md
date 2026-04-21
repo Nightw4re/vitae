@@ -13,6 +13,44 @@ runs/client/saves/<world>/datapacks/vitae_test/data/test/vitae/entities/
 runs/client/saves/<world>/datapacks/vitae_test/data/test/vitae/npcs/
 ```
 
+The repository also includes a built-in demo entity, `vitae:angry_boy`.
+All three demo spawn methods are available at the same time: command, spawn egg, and one-time spawner block.
+
+---
+
+## 0. Built-in demo entity
+
+Use any of the following:
+
+**Command mode**
+
+```text
+/vitae spawn_angry_boy
+```
+
+**Spawn egg mode**
+
+```text
+/give @s vitae:angry_boy_spawn_egg
+```
+
+**One-time spawner block**
+
+```text
+/give @s vitae:angry_boy_one_time_spawner
+```
+
+**Verify:**
+
+- [ ] The command spawns `vitae:angry_boy`
+- [ ] The spawn egg spawns `vitae:angry_boy`
+- [ ] The one-time spawner block spawns `vitae:angry_boy` and destroys itself
+- [ ] Right-clicking the one-time spawner with an empty hand cycles its activation distance
+- [ ] The entity renders as a large grass block and is visibly taller than the player silhouette
+- [ ] The entity attacks nearby players
+- [ ] The entity shows a boss bar when tracked by a player
+- [ ] The entity uses the built-in definition values for health, speed, damage, and armor
+
 ---
 
 ## 1. Passive NPC (idle)

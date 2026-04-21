@@ -81,7 +81,7 @@ dependencies {
     }
 
     compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
-    localRuntime "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    // KubeJS stays compile-only for now so the dev client can start without it.
 }
 
 tasks.withType(ProcessResources).configureEach {
