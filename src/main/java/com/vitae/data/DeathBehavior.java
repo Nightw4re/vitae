@@ -6,9 +6,11 @@ package com.vitae.data;
  * @param animation      cinematic animation to play before despawning (nullable = no animation)
  * @param delayLoot      if true, loot drops only after the death animation finishes
  * @param becomeFriendly if true, the entity becomes a passive NPC instead of dying
- */
+ * @param spawnLootChest if true, a chest with the entity loot is spawned on death
+*/
 public record DeathBehavior(
         String animation,
         boolean delayLoot,
-        boolean becomeFriendly
+        boolean becomeFriendly,
+        boolean spawnLootChest
 ) {}

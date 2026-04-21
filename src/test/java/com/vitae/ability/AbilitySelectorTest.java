@@ -93,7 +93,7 @@ public final class AbilitySelectorTest {
     // --- Helpers ---
 
     private static AbilityDefinition ability(String id, int cooldown, AbilityCondition condition) {
-        return new AbilityDefinition(id, id, cooldown, condition, AbilityParameters.empty());
+        return new AbilityDefinition(id, id, cooldown, condition, AbilityParameters.empty(), List.of(), 0, 0, true);
     }
 
     private static Random fixedRandom(double value) {

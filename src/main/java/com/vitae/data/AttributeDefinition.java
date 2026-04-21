@@ -5,12 +5,13 @@ package com.vitae.data;
  */
 public record AttributeDefinition(
         double maxHealth,
+        double followRange,
         double movementSpeed,
         double attackDamage,
         double armor
 ) {
 
     public static AttributeDefinition defaults() {
-        return new AttributeDefinition(20.0, 0.25, 2.0, 0.0);
+        return new AttributeDefinition(20.0, 32.0, 0.25, 2.0, 0.0);
     }
 }

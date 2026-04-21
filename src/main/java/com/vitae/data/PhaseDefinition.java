@@ -11,7 +11,7 @@ import java.util.List;
  *
  * @param id              unique identifier for this phase
  * @param healthThreshold fraction of max health at which this phase activates (0.0–1.0)
- * @param abilities       list of ability IDs active during this phase
+ * @param abilities       list of ability references active during this phase
  * @param animation       idle/loop animation name for this phase (nullable = use default)
  * @param model           optional GeckoLib model override for this phase (nullable = use entity default)
  * @param scale           optional scale multiplier for this phase (1.0 = normal size)
@@ -20,7 +20,7 @@ import java.util.List;
 public record PhaseDefinition(
         String id,
         double healthThreshold,
-        List<String> abilities,
+        List<AbilityReference> abilities,
         String animation,
         String model,
         double scale,

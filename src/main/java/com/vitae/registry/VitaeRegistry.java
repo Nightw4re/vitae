@@ -1,5 +1,7 @@
 package com.vitae.registry;
 
+import com.vitae.data.AbilityDefinition;
+import com.vitae.data.AbilityDefinitionLoader;
 import com.vitae.data.EntityDefinition;
 import com.vitae.data.EntityDefinitionLoader;
 import com.vitae.data.NpcDefinition;
@@ -28,12 +30,14 @@ public final class VitaeRegistry implements PreparableReloadListener {
 
     private static final VitaeRegistry INSTANCE = new VitaeRegistry();
 
-    private static final String ENTITY_PREFIX = "vitae/entities";
-    private static final String NPC_PREFIX    = "vitae/npcs";
-    private static final String SUFFIX        = ".json";
+    private static final String ENTITY_PREFIX  = "vitae/entities";
+    private static final String ABILITY_PREFIX = "vitae/abilities";
+    private static final String NPC_PREFIX     = "vitae/npcs";
+    private static final String SUFFIX         = ".json";
 
     private final Map<ResourceLocation, EntityDefinition> entities = new HashMap<>();
-    private final Map<ResourceLocation, NpcDefinition>    npcs     = new HashMap<>();
+    private final Map<ResourceLocation, AbilityDefinition> abilities = new HashMap<>();
+    private final Map<ResourceLocation, NpcDefinition> npcs = new HashMap<>();
 
     private VitaeRegistry() {}
 
@@ -56,6 +60,8 @@ public final class VitaeRegistry implements PreparableReloadListener {
                 .thenAcceptAsync(data -> {
                     entities.clear();
                     entities.putAll(data.entities());
+                    abilities.clear();
+                    abilities.putAll(data.abilities());
                     npcs.clear();
                     npcs.putAll(data.npcs());
                 }, gameExecutor);
@@ -63,15 +69,26 @@ public final class VitaeRegistry implements PreparableReloadListener {
 
     private LoadedData loadAll(ResourceManager manager) {
         Map<ResourceLocation, EntityDefinition> loadedEntities = new HashMap<>();
-        Map<ResourceLocation, NpcDefinition>    loadedNpcs     = new HashMap<>();
+        Map<ResourceLocation, AbilityDefinition> loadedAbilities = new HashMap<>();
+        Map<ResourceLocation, NpcDefinition> loadedNpcs = new HashMap<>();
 
         manager.listResources(ENTITY_PREFIX, path -> path.getPath().endsWith(SUFFIX))
                 .forEach((location, resource) -> {
                     try (InputStream stream = resource.open()) {
                         String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        loadedEntities.put(location, EntityDefinitionLoader.parse(json));
+                        loadedEntities.put(toDefinitionId(location, ENTITY_PREFIX), EntityDefinitionLoader.parse(json));
                     } catch (IOException | IllegalArgumentException e) {
                         System.err.println("[Vitae] Failed to load entity definition " + location + ": " + e.getMessage());
+                    }
+                });
+
+        manager.listResources(ABILITY_PREFIX, path -> path.getPath().endsWith(SUFFIX))
+                .forEach((location, resource) -> {
+                    try (InputStream stream = resource.open()) {
+                        String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                        loadedAbilities.put(toDefinitionId(location, ABILITY_PREFIX), AbilityDefinitionLoader.parse(json));
+                    } catch (IOException | IllegalArgumentException e) {
+                        System.err.println("[Vitae] Failed to load ability definition " + location + ": " + e.getMessage());
                     }
                 });
 
@@ -79,22 +96,31 @@ public final class VitaeRegistry implements PreparableReloadListener {
                 .forEach((location, resource) -> {
                     try (InputStream stream = resource.open()) {
                         String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        loadedNpcs.put(location, NpcDefinitionLoader.parse(json));
+                        loadedNpcs.put(toDefinitionId(location, NPC_PREFIX), NpcDefinitionLoader.parse(json));
                     } catch (IOException | IllegalArgumentException e) {
                         System.err.println("[Vitae] Failed to load NPC definition " + location + ": " + e.getMessage());
                     }
                 });
 
-        return new LoadedData(loadedEntities, loadedNpcs);
+        return new LoadedData(loadedEntities, loadedAbilities, loadedNpcs);
     }
 
     public EntityDefinition getEntity(ResourceLocation id) { return entities.get(id); }
-    public NpcDefinition    getNpc(ResourceLocation id)    { return npcs.get(id); }
+    public AbilityDefinition getAbility(ResourceLocation id) { return abilities.get(id); }
+    public NpcDefinition getNpc(ResourceLocation id) { return npcs.get(id); }
     public Map<ResourceLocation, EntityDefinition> getEntities() { return Map.copyOf(entities); }
-    public Map<ResourceLocation, NpcDefinition>    getNpcs()     { return Map.copyOf(npcs); }
+    public Map<ResourceLocation, AbilityDefinition> getAbilities() { return Map.copyOf(abilities); }
+    public Map<ResourceLocation, NpcDefinition> getNpcs() { return Map.copyOf(npcs); }
+
+    private static ResourceLocation toDefinitionId(ResourceLocation location, String prefix) {
+        String path = location.getPath();
+        String trimmed = path.substring(prefix.length() + 1, path.length() - SUFFIX.length());
+        return ResourceLocation.fromNamespaceAndPath(location.getNamespace(), trimmed);
+    }
 
     private record LoadedData(
             Map<ResourceLocation, EntityDefinition> entities,
-            Map<ResourceLocation, NpcDefinition>    npcs
+            Map<ResourceLocation, AbilityDefinition> abilities,
+            Map<ResourceLocation, NpcDefinition> npcs
     ) {}
 }

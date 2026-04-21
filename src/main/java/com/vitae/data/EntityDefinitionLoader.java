@@ -23,18 +23,22 @@ public final class EntityDefinitionLoader {
 
         String model = requireString(root, "model");
         String animations = requireString(root, "animations");
+        int xpReward = (int) getDouble(root, "xp_reward", -1.0);
         String lootTable = getString(root, "loot_table", null);
         String introAnimation = getString(root, "intro_animation", null);
         String spawnStructure = getString(root, "spawn_structure", null);
 
         AttributeDefinition attributes = parseAttributes(root);
         List<PhaseDefinition> phases = parsePhases(root);
+        List<AbilityReference> abilities = parseAbilityReferences(root);
         DeathBehavior deathBehavior = parseDeathBehavior(root);
         ResetBehavior resetBehavior = parseResetBehavior(root);
         BossBarDefinition bossBar = parseBossBar(root);
+        CombatDefinition combat = parseCombat(root);
+        EquipmentDefinition equipment = parseEquipment(root);
 
-        return new EntityDefinition(model, animations, attributes, phases, lootTable,
-                introAnimation, deathBehavior, resetBehavior, bossBar, spawnStructure);
+        return new EntityDefinition(model, animations, attributes, phases, abilities, xpReward, lootTable,
+                introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, spawnStructure);
     }
 
     private static AttributeDefinition parseAttributes(JsonObject root) {
@@ -43,6 +47,7 @@ public final class EntityDefinitionLoader {
         JsonObject a = root.getAsJsonObject("attributes");
         return new AttributeDefinition(
                 getDouble(a, "max_health", defaults.maxHealth()),
+                getDouble(a, "follow_range", defaults.followRange()),
                 getDouble(a, "movement_speed", defaults.movementSpeed()),
                 getDouble(a, "attack_damage", defaults.attackDamage()),
                 getDouble(a, "armor", defaults.armor())
@@ -61,10 +66,26 @@ public final class EntityDefinitionLoader {
             String model = getString(p, "model", null);
             double scale = getDouble(p, "scale", PhaseDefinition.DEFAULT_SCALE);
             PhaseTransitionDefinition transition = parseTransition(p);
-            List<String> abilities = parseStringArray(p, "abilities");
-            phases.add(new PhaseDefinition(id, threshold, List.copyOf(abilities), animation, model, scale, transition));
+            phases.add(new PhaseDefinition(id, threshold, List.of(), animation, model, scale, transition));
         }
         return List.copyOf(phases);
+    }
+
+    private static List<AbilityReference> parseAbilityReferences(JsonObject root) {
+        if (!root.has("abilities")) return List.of();
+        JsonArray arr = root.getAsJsonArray("abilities");
+        List<AbilityReference> references = new ArrayList<>(arr.size());
+        for (JsonElement el : arr) {
+            if (el.isJsonPrimitive()) {
+                references.add(new AbilityReference(el.getAsString(), null));
+                continue;
+            }
+            JsonObject ref = el.getAsJsonObject();
+            String id = requireString(ref, "id");
+            String cooldownTicks = getModifierString(ref, "cooldown_ticks", null);
+            references.add(new AbilityReference(id, cooldownTicks));
+        }
+        return List.copyOf(references);
     }
 
     private static PhaseTransitionDefinition parseTransition(JsonObject phase) {
@@ -82,7 +103,8 @@ public final class EntityDefinitionLoader {
         return new DeathBehavior(
                 getString(d, "animation", null),
                 getBoolean(d, "delay_loot", false),
-                getBoolean(d, "become_friendly", false)
+                getBoolean(d, "become_friendly", false),
+                getBoolean(d, "spawn_loot_chest", false)
         );
     }
 
@@ -108,6 +130,30 @@ public final class EntityDefinitionLoader {
         );
     }
 
+    private static CombatDefinition parseCombat(JsonObject root) {
+        CombatDefinition defaults = CombatDefinition.defaults();
+        if (!root.has("combat")) return defaults;
+        JsonObject c = root.getAsJsonObject("combat");
+        return new CombatDefinition(
+                getBoolean(c, "basic_melee_enabled", defaults.basicMeleeEnabled()),
+                (int) getDouble(c, "basic_melee_cooldown_ticks", defaults.basicMeleeCooldownTicks()),
+                getDouble(c, "basic_melee_range", defaults.basicMeleeRange()),
+                getBoolean(c, "scale_damage_with_held_weapon", defaults.scaleDamageWithHeldWeapon()),
+                getBoolean(c, "scale_attack_speed_with_held_weapon", defaults.scaleAttackSpeedWithHeldWeapon()),
+                getDouble(c, "spin_radius", defaults.spinRadius()),
+                getBoolean(c, "spin_invulnerable", defaults.spinInvulnerable())
+        );
+    }
+
+    private static EquipmentDefinition parseEquipment(JsonObject root) {
+        EquipmentDefinition defaults = EquipmentDefinition.defaults();
+        if (!root.has("equipment")) return defaults;
+        JsonObject e = root.getAsJsonObject("equipment");
+        return new EquipmentDefinition(
+                getNullableString(e, "main_hand", defaults.mainHandItem())
+        );
+    }
+
     private static List<String> parseStringArray(JsonObject obj, String key) {
         List<String> result = new ArrayList<>();
         if (obj.has(key)) {
@@ -125,6 +171,24 @@ public final class EntityDefinitionLoader {
 
     private static String getString(JsonObject obj, String key, String fallback) {
         return obj.has(key) ? obj.get(key).getAsString() : fallback;
+    }
+
+    private static String getNullableString(JsonObject obj, String key, String fallback) {
+        if (!obj.has(key) || obj.get(key).isJsonNull()) {
+            return fallback;
+        }
+        return obj.get(key).getAsString();
+    }
+
+    private static String getModifierString(JsonObject obj, String key, String fallback) {
+        if (!obj.has(key) || obj.get(key).isJsonNull()) {
+            return fallback;
+        }
+        JsonElement element = obj.get(key);
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isNumber()) {
+            return Integer.toString(element.getAsInt());
+        }
+        return element.getAsString();
     }
 
     private static double getDouble(JsonObject obj, String key, double fallback) {

@@ -3,6 +3,8 @@ package com.vitae.testsupport;
 public final class TestRunner {
     private static final String[] TESTS = {
             "com.vitae.data.EntityDefinitionTest",
+            "com.vitae.data.AbilityModifierParserTest",
+            "com.vitae.data.GrabTimelineTest",
             "com.vitae.phase.PhaseManagerTest",
             "com.vitae.ability.AbilityCooldownTrackerTest",
             "com.vitae.ability.AbilitySelectorTest",

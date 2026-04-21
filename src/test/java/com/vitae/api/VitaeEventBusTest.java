@@ -1,6 +1,7 @@
 package com.vitae.api;
 
 import com.vitae.data.AbilityDefinition;
+import com.vitae.data.AbilityReference;
 import com.vitae.data.AbilityParameters;
 import com.vitae.data.PhaseDefinition;
 import com.vitae.testsupport.TestAssertions;
@@ -75,7 +76,7 @@ public final class VitaeEventBusTest {
         VitaeEventBus bus = new VitaeEventBus();
         List<VitaeEntityEvent> received = new ArrayList<>();
         bus.register(received::add);
-        AbilityDefinition ability = new AbilityDefinition("staff_beam", "ranged_projectile", 40, null, AbilityParameters.empty());
+        AbilityDefinition ability = new AbilityDefinition("staff_beam", "ranged_projectile", 40, null, AbilityParameters.empty(), List.of(), 0, 0, true);
         bus.fire(new VitaeEntityEvent.AbilityUsed("jaffa_warrior", ability));
         VitaeEntityEvent.AbilityUsed event = (VitaeEntityEvent.AbilityUsed) received.get(0);
         TestAssertions.assertEquals("staff_beam", event.ability().id());

@@ -21,6 +21,7 @@ public class VitaeMob extends PathfinderMob implements GeoEntity {
 
     private final EntityDefinition definition;
     private final AnimatableInstanceCache animatableCache = GeckoLibUtil.createInstanceCache(this);
+    private int introAnimationTicksRemaining;
 
     protected VitaeMob(EntityType<? extends VitaeMob> type, Level level, EntityDefinition definition) {
         super(type, level);
@@ -29,6 +30,26 @@ public class VitaeMob extends PathfinderMob implements GeoEntity {
 
     public EntityDefinition getDefinition() {
         return definition;
+    }
+
+    public boolean hasIntroAnimationPending() {
+        return introAnimationTicksRemaining > 0 && definition.hasIntro();
+    }
+
+    protected void playIntroAnimation() {
+        introAnimationTicksRemaining = 120;
+    }
+
+    protected void clearIntroAnimation() {
+        introAnimationTicksRemaining = 0;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (introAnimationTicksRemaining > 0) {
+            introAnimationTicksRemaining--;
+        }
     }
 
     /** Returns the currently active phase based on the entity's health percentage. */
