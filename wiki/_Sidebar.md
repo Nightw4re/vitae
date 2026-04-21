@@ -4,4 +4,5 @@
 * [Ability System](Ability-System)
 * [Spawn Rules](Spawn-Rules)
 * [Demo Content](Demo-Content)
+* [KubeJS API](KubeJS-API)
 * [Development](Development)
