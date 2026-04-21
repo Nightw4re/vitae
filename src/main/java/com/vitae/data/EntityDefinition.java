@@ -23,7 +23,8 @@ public record EntityDefinition(
         BossBarDefinition bossBar,
         CombatDefinition combat,
         EquipmentDefinition equipment,
-        String spawnStructure
+        String spawnStructure,
+        SpawnRules spawnRules
 ) {
 
     /**
@@ -98,9 +99,40 @@ public record EntityDefinition(
         return equipment != null ? equipment : EquipmentDefinition.defaults();
     }
 
+    public SpawnRules spawnRulesOrDefault() {
+        return spawnRules != null ? spawnRules : SpawnRules.defaults();
+    }
+
     /** Returns true if this entity is tied to a specific spawn structure. */
     public boolean hasSpawnStructure() {
         return spawnStructure != null && !spawnStructure.isBlank();
+    }
+
+    public String spawnStructureOrNull() {
+        return hasSpawnStructure() ? spawnStructure : null;
+    }
+
+    public boolean hasNaturalSpawnRestrictions() {
+        return !isBoss() && (hasSpawnStructure() || spawnRulesOrDefault().hasAnyRestrictions());
+    }
+
+    public boolean canSpawnInBiome(String biomeId) {
+        if (biomeId == null || biomeId.isBlank()) {
+            return true;
+        }
+        List<String> biomes = spawnRulesOrDefault().biomesOrDefault();
+        return biomes.isEmpty() || biomes.stream().anyMatch(biomeId::equalsIgnoreCase);
+    }
+
+    public boolean canSpawnInStructure(String structureId) {
+        if (structureId == null || structureId.isBlank()) {
+            return !hasSpawnStructure();
+        }
+        List<String> structures = spawnRulesOrDefault().structuresOrDefault();
+        if (!structures.isEmpty()) {
+            return structures.stream().anyMatch(structureId::equalsIgnoreCase);
+        }
+        return spawnStructure == null || spawnStructure.isBlank() || structureId.equalsIgnoreCase(spawnStructure);
     }
 
     private boolean matchesUnqualifiedId(String requestedId, String actualId) {

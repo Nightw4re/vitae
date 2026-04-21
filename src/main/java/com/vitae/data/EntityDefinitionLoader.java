@@ -36,9 +36,10 @@ public final class EntityDefinitionLoader {
         BossBarDefinition bossBar = parseBossBar(root);
         CombatDefinition combat = parseCombat(root);
         EquipmentDefinition equipment = parseEquipment(root);
+        SpawnRules spawnRules = parseSpawnRules(root);
 
         return new EntityDefinition(model, animations, attributes, phases, abilities, xpReward, lootTable,
-                introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, spawnStructure);
+                introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, spawnStructure, spawnRules);
     }
 
     private static AttributeDefinition parseAttributes(JsonObject root) {
@@ -152,6 +153,37 @@ public final class EntityDefinitionLoader {
         return new EquipmentDefinition(
                 getNullableString(e, "main_hand", defaults.mainHandItem())
         );
+    }
+
+    private static SpawnRules parseSpawnRules(JsonObject root) {
+        List<String> biomes = List.of();
+        List<String> structures = List.of();
+        int maxNearbyGlobal = 0;
+        int maxNearbyPerBiome = 0;
+        int maxNearbyPerStructure = 0;
+
+        if (root.has("spawn_rules")) {
+            JsonObject rules = root.getAsJsonObject("spawn_rules");
+            biomes = parseStringArray(rules, "biomes");
+            structures = parseStringArray(rules, "structures");
+            maxNearbyGlobal = (int) getDouble(rules, "max_nearby_global", 0.0);
+            maxNearbyPerBiome = (int) getDouble(rules, "max_nearby_per_biome", 0.0);
+            maxNearbyPerStructure = (int) getDouble(rules, "max_nearby_per_structure", 0.0);
+        }
+
+        if (root.has("spawn_biomes")) {
+            biomes = parseStringArray(root, "spawn_biomes");
+        }
+        if (root.has("spawn_structures")) {
+            structures = parseStringArray(root, "spawn_structures");
+        }
+
+        if (biomes.isEmpty() && structures.isEmpty()) {
+            if (maxNearbyGlobal <= 0 && maxNearbyPerBiome <= 0 && maxNearbyPerStructure <= 0) {
+                return SpawnRules.defaults();
+            }
+        }
+        return new SpawnRules(List.copyOf(biomes), List.copyOf(structures), maxNearbyGlobal, maxNearbyPerBiome, maxNearbyPerStructure);
     }
 
     private static List<String> parseStringArray(JsonObject obj, String key) {

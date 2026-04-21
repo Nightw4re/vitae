@@ -7,6 +7,7 @@ import com.vitae.data.EntityDefinition;
 import com.vitae.data.EquipmentDefinition;
 import com.vitae.data.PhaseDefinition;
 import com.vitae.data.PhaseTransitionDefinition;
+import com.vitae.data.SpawnRules;
 import com.vitae.testsupport.TestAssertions;
 
 import java.util.List;
@@ -102,7 +103,7 @@ public final class PhaseManagerTest {
                 new PhaseDefinition("phase_1", 1.0, List.of(new AbilityReference("melee_attack", null)), "phase_1_idle", null, 1.0, null),
                 new PhaseDefinition("phase_2", 0.5, List.of(new AbilityReference("staff_beam", null)), "phase_2_idle", null, 1.4, transition)
         );
-        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null);
+        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults());
     }
 
     private static EntityDefinition twoPhaseEntityNoTransition() {
@@ -110,7 +111,7 @@ public final class PhaseManagerTest {
                 new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null),
                 new PhaseDefinition("phase_2", 0.5, List.of(), null, null, 1.0, null)
         );
-        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null);
+        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults());
     }
 
     private static EntityDefinition threePhaseEntity() {
@@ -120,6 +121,6 @@ public final class PhaseManagerTest {
                 new PhaseDefinition("phase_2", 0.5, List.of(), null, null, 1.0, transition),
                 new PhaseDefinition("phase_3", 0.2, List.of(), null, null, 1.0, null)
         );
-        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null);
+        return new EntityDefinition("model", "animations", AttributeDefinition.defaults(), phases, List.of(), 0, null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults());
     }
 }

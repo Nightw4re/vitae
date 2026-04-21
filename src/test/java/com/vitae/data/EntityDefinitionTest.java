@@ -17,6 +17,8 @@ public final class EntityDefinitionTest {
         testDefaultAttributes();
         testDefaultCombat();
         testAbilityReferenceLookupSupportsNamespacedAndShortIds();
+        testNaturalSpawnRules();
+        testBossIgnoresNaturalSpawnRules();
     }
 
     private static void testIsBossWithMultiplePhases() {
@@ -100,13 +102,66 @@ public final class EntityDefinitionTest {
                 null,
                 CombatDefinition.defaults(),
                 EquipmentDefinition.defaults(),
-                null
+                null,
+                SpawnRules.defaults()
         );
 
         TestAssertions.assertNotNull(def.getAbility("vitae:vex_grab"));
         TestAssertions.assertNotNull(def.getAbility("vex_grab"));
         TestAssertions.assertNotNull(def.getAbility("melee_attack"));
         TestAssertions.assertEquals("200", def.getAbility("vex_grab").cooldownTicks());
+    }
+
+    private static void testNaturalSpawnRules() {
+        EntityDefinition def = new EntityDefinition(
+                "model",
+                "animations",
+                AttributeDefinition.defaults(),
+                List.of(),
+                List.of(),
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CombatDefinition.defaults(),
+                EquipmentDefinition.defaults(),
+                null,
+                new SpawnRules(List.of("minecraft:plains", "minecraft:forest"), List.of("minecraft:ancient_city"), 4, 2, 1)
+        );
+
+        TestAssertions.assertTrue(def.hasNaturalSpawnRestrictions());
+        TestAssertions.assertTrue(def.canSpawnInBiome("minecraft:plains"));
+        TestAssertions.assertFalse(def.canSpawnInBiome("minecraft:desert"));
+        TestAssertions.assertTrue(def.canSpawnInStructure("minecraft:ancient_city"));
+        TestAssertions.assertFalse(def.canSpawnInStructure("minecraft:stronghold"));
+    }
+
+    private static void testBossIgnoresNaturalSpawnRules() {
+        EntityDefinition def = new EntityDefinition(
+                "model",
+                "animations",
+                AttributeDefinition.defaults(),
+                List.of(
+                        new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null),
+                        new PhaseDefinition("phase_2", 0.5, List.of(), null, null, 1.0, null)
+                ),
+                List.of(),
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CombatDefinition.defaults(),
+                EquipmentDefinition.defaults(),
+                null,
+                new SpawnRules(List.of("minecraft:plains"), List.of("minecraft:ancient_city"), 1, 1, 1)
+        );
+
+        TestAssertions.assertTrue(def.isBoss());
+        TestAssertions.assertFalse(def.hasNaturalSpawnRestrictions());
     }
 
     // --- Helpers ---
@@ -124,7 +179,7 @@ public final class EntityDefinitionTest {
                 List.of(),
                 30,
                 "mypack:entities/test",
-                null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null
+                null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
         );
     }
 
@@ -136,7 +191,7 @@ public final class EntityDefinitionTest {
                 List.of(new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null)),
                 List.of(),
                 0,
-                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null
+                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
         );
     }
 
@@ -148,7 +203,7 @@ public final class EntityDefinitionTest {
                 List.of(),
                 List.of(),
                 0,
-                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null
+                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
         );
     }
 }
