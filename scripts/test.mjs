@@ -46,6 +46,7 @@ const MINECRAFT_DEPENDENT = [
     'VitaeRegistry.java',
     'VitaeDemoDefinition.java',
     'BossAbilityRuntime.java',
+    'PhaseLockController.java',
     'AbilityCastScheduler.java',
     'AbilityDefinitionLoader.java',
     'CarryTargetExecutor.java',

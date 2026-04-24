@@ -1,0 +1,23 @@
+{
+  "id": "guard_summon",
+  "type": "summon",
+  "cooldown_ticks": 9999,
+  "condition": {
+    "min_health_percent": 0.75,
+    "max_health_percent": 0.75,
+    "chance": 1.0
+  },
+  "parameters": {
+    "summon_id": "minecraft:zombie",
+    "count": 4,
+    "radius": 2.0,
+    "invulnerable": true,
+    "scale_multiplier": 2.0,
+    "spawn_points": [
+      { "x": 2.0, "z": 2.0 },
+      { "x": -2.0, "z": 2.0 },
+      { "x": -2.0, "z": -2.0 },
+      { "x": 2.0, "z": -2.0 }
+    ]
+  }
+}

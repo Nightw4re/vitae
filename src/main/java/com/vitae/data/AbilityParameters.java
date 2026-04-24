@@ -1,5 +1,7 @@
 package com.vitae.data;
 
+import java.util.List;
+
 /**
  * Type-specific parameters for an ability.
  *
@@ -24,9 +26,11 @@ public record AbilityParameters(
         boolean invulnerable,
         boolean noAi,
         boolean interruptible,
-        double heightOffset
+        double heightOffset,
+        List<SpawnPointDefinition> spawnPoints,
+        double scaleMultiplier
 ) {
     public static AbilityParameters empty() {
-        return new AbilityParameters(0, 0, null, 1.0, null, 1, 0, null, null, null, null, null, 0, false, false, true, 0.6D);
+        return new AbilityParameters(0, 0, null, 1.0, null, 1, 0, null, null, null, null, null, 0, false, false, true, 0.6D, List.of(), 1.0D);
     }
 }

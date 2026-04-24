@@ -2,24 +2,27 @@ package com.vitae;
 
 import com.vitae.registry.VitaeContent;
 import com.vitae.registry.VitaeRegistry;
+import com.vitae.data.BossDamagePolicy;
 import com.vitae.data.EntityDefinition;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.core.registries.Registries;
+import com.vitae.entity.VitaeMob;
 
 @Mod(VitaeMod.MOD_ID)
 public class VitaeMod {
@@ -32,11 +35,40 @@ public class VitaeMod {
         VitaeContent.ITEMS.register(modEventBus);
         VitaeContent.BLOCK_ENTITY_TYPES.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(this::onLivingDrops);
         NeoForge.EVENT_BUS.addListener(this::onEntityJoinLevel);
+        NeoForge.EVENT_BUS.addListener(this::onLivingIncomingDamage);
     }
 
     private void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(VitaeRegistry.get());
+    }
+
+    private void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof com.vitae.demo.VitaeTestEntity entity) || !(entity.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        event.getDrops().clear();
+        EntityDefinition definition = VitaeRegistry.get().getEntity(net.minecraft.world.entity.EntityType.getKey(entity.getType()));
+        if (definition == null) {
+            return;
+        }
+        String lootTableId = definition.lootTableForDeath(event.getSource().getEntity() instanceof Player);
+        if (lootTableId == null || lootTableId.isBlank()) {
+            return;
+        }
+        var lootTable = VitaeRegistry.get().getLootTable(ResourceLocation.parse(lootTableId));
+        if (lootTable == null) {
+            return;
+        }
+        var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(serverLevel)
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.THIS_ENTITY, entity)
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, entity.position())
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.DAMAGE_SOURCE, event.getSource())
+                .withOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ATTACKING_ENTITY, event.getSource().getEntity())
+                .withOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.DIRECT_ATTACKING_ENTITY, event.getSource().getDirectEntity())
+                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.ENTITY);
+        lootTable.getRandomItems(params).forEach(stack -> event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(serverLevel, entity.getX(), entity.getY(), entity.getZ(), stack)));
     }
 
     private void onEntityJoinLevel(EntityJoinLevelEvent event) {
@@ -71,6 +103,50 @@ public class VitaeMod {
 
         if (!withinSpawnCaps(level, mob.blockPosition(), mob.getType(), definition)) {
             event.setCanceled(true);
+        }
+    }
+
+    private void onLivingIncomingDamage(LivingIncomingDamageEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (!(entity instanceof Mob mob) || !(mob.level() instanceof ServerLevel)) {
+            return;
+        }
+
+        ResourceLocation entityId = net.minecraft.world.entity.EntityType.getKey(mob.getType());
+        EntityDefinition definition = VitaeRegistry.get().getEntity(entityId);
+        if (definition == null) {
+            return;
+        }
+
+        double floorPercent = 0.0D;
+        if (mob instanceof com.vitae.demo.VitaeTestEntity demoBoss) {
+            floorPercent = demoBoss.currentSummonLockFloorOrDefault();
+        } else if (mob instanceof VitaeMob vitaeMob) {
+            floorPercent = vitaeMob.currentSummonLockFloorOrDefault();
+        }
+        if (floorPercent <= 0.0D) {
+            if (mob instanceof com.vitae.demo.VitaeTestEntity demoBoss && demoBoss.isSummonLockActive()) {
+                event.setAmount(0.0F);
+            } else if (mob instanceof VitaeMob vitaeMob && vitaeMob.isSummonLockActive()) {
+                event.setAmount(0.0F);
+            }
+            return;
+        }
+
+        float maxHealth = mob.getMaxHealth();
+        if (maxHealth <= 0.0F) {
+            return;
+        }
+
+        float currentHealth = mob.getHealth();
+        float clampedDamage = BossDamagePolicy.clampDamageToFloor(currentHealth, maxHealth, floorPercent, event.getAmount());
+        event.setAmount(clampedDamage);
+
+        boolean summonLocked = mob instanceof com.vitae.demo.VitaeTestEntity demoBoss
+                ? demoBoss.isSummonLockActive()
+                : mob instanceof VitaeMob vitaeMob && vitaeMob.isSummonLockActive();
+        if (BossDamagePolicy.shouldBlockDamageWhileSummonLocked(summonLocked)) {
+            event.setAmount(0.0F);
         }
     }
 

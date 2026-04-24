@@ -64,8 +64,8 @@ public final class VitaeEventBusTest {
         VitaeEventBus bus = new VitaeEventBus();
         List<VitaeEntityEvent> received = new ArrayList<>();
         bus.register(received::add);
-        PhaseDefinition p1 = new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null);
-        PhaseDefinition p2 = new PhaseDefinition("phase_2", 0.5, List.of(), null, null, 1.4, null);
+        PhaseDefinition p1 = new PhaseDefinition("phase_1", 1.0, 0.0, List.of(), null, null, 1.0, null, null);
+        PhaseDefinition p2 = new PhaseDefinition("phase_2", 0.5, 0.0, List.of(), null, null, 1.4, null, null);
         bus.fire(new VitaeEntityEvent.PhaseChange("system_lord", p1, p2));
         VitaeEntityEvent.PhaseChange event = (VitaeEntityEvent.PhaseChange) received.get(0);
         TestAssertions.assertEquals("phase_1", event.previous().id());
@@ -82,3 +82,4 @@ public final class VitaeEventBusTest {
         TestAssertions.assertEquals("staff_beam", event.ability().id());
     }
 }
+

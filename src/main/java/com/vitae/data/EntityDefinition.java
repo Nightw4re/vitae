@@ -17,15 +17,41 @@ public record EntityDefinition(
         List<AbilityReference> abilities,
         int xpReward,
         String lootTable,
+        String playerLootTable,
+        String genericLootTable,
         String introAnimation,
         DeathBehavior deathBehavior,
         ResetBehavior resetBehavior,
         BossBarDefinition bossBar,
         CombatDefinition combat,
         EquipmentDefinition equipment,
+        List<Double> hpLocks,
+        PhaseLockDefinition summonLock,
         String spawnStructure,
         SpawnRules spawnRules
 ) {
+    public EntityDefinition(
+            String model,
+            String animations,
+            AttributeDefinition attributes,
+            List<PhaseDefinition> phases,
+            List<AbilityReference> abilities,
+            int xpReward,
+            String lootTable,
+            String introAnimation,
+            DeathBehavior deathBehavior,
+            ResetBehavior resetBehavior,
+            BossBarDefinition bossBar,
+            CombatDefinition combat,
+            EquipmentDefinition equipment,
+            List<Double> hpLocks,
+            PhaseLockDefinition summonLock,
+            String spawnStructure,
+            SpawnRules spawnRules
+    ) {
+        this(model, animations, attributes, phases, abilities, xpReward, lootTable, null, null, introAnimation,
+                deathBehavior, resetBehavior, bossBar, combat, equipment, hpLocks, summonLock, spawnStructure, spawnRules);
+    }
 
     /**
      * Returns the active phase for the given health percentage (0.0–1.0).
@@ -62,8 +88,34 @@ public record EntityDefinition(
         return xpReward >= 0 ? xpReward : 0;
     }
 
+    public String lootTableOrDefault() {
+        return lootTable;
+    }
+
+    public String lootTableForDeath(boolean killedByPlayer) {
+        if (killedByPlayer && playerLootTable != null && !playerLootTable.isBlank()) {
+            return playerLootTable;
+        }
+        if (genericLootTable != null && !genericLootTable.isBlank()) {
+            return genericLootTable;
+        }
+        return lootTable;
+    }
+
     public CombatDefinition combatOrDefault() {
         return combat != null ? combat : CombatDefinition.defaults();
+    }
+
+    public List<Double> hpLocksOrDefault() {
+        return hpLocks != null ? hpLocks : List.of();
+    }
+
+    public PhaseLockDefinition summonLockOrDefault() {
+        return summonLock;
+    }
+
+    public boolean hasHpLockThreshold(double threshold) {
+        return hpLocksOrDefault().stream().anyMatch(lock -> Double.compare(lock, threshold) == 0);
     }
 
     public List<AbilityReference> abilitiesOrDefault() {
@@ -114,6 +166,39 @@ public record EntityDefinition(
 
     public boolean hasNaturalSpawnRestrictions() {
         return !isBoss() && (hasSpawnStructure() || spawnRulesOrDefault().hasAnyRestrictions());
+    }
+
+    public double maxPhaseHealthFloorOrDefault() {
+        List<Double> locks = hpLocksOrDefault();
+        if (!locks.isEmpty()) {
+            return locks.stream().mapToDouble(Double::doubleValue).max().orElse(0.0D);
+        }
+        if (phases == null || phases.isEmpty()) {
+            return 0.0D;
+        }
+        return phases.stream()
+                .mapToDouble(PhaseDefinition::healthFloorPercent)
+                .max()
+                .orElse(0.0D);
+    }
+
+    public double nextPhaseHealthFloorOrDefault(double currentHealthPercent) {
+        List<Double> locks = hpLocksOrDefault();
+        if (!locks.isEmpty()) {
+            return locks.stream()
+                    .filter(lock -> lock < currentHealthPercent)
+                    .mapToDouble(Double::doubleValue)
+                    .max()
+                    .orElse(0.0D);
+        }
+        if (phases == null || phases.isEmpty()) {
+            return 0.0D;
+        }
+        return phases.stream()
+                .filter(phase -> phase != null && phase.healthThreshold() < currentHealthPercent && phase.hasHealthFloor())
+                .mapToDouble(PhaseDefinition::healthFloorPercent)
+                .max()
+                .orElse(0.0D);
     }
 
     public boolean canSpawnInBiome(String biomeId) {

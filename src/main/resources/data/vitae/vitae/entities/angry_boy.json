@@ -1,6 +1,7 @@
 {
   "model": "vitae:geo/angry_boy.geo.json",
   "animations": "vitae:animations/angry_boy.animation.json",
+  "loot_table": "vitae:entities/angry_boy",
   "xp_reward": 30,
   "attributes": {
     "max_health": 12,
@@ -21,6 +22,7 @@
   "equipment": {
     "main_hand": null
   },
+  "hp_lock": [0.75],
   "abilities": [
     { "id": "vitae:vex_grab", "cooldown_ticks": "200" },
     { "id": "vitae:spin_slash" },
@@ -33,6 +35,11 @@
       "animation": "angry_idle"
     },
     {
+      "id": "guarded",
+      "health_threshold": 0.75,
+      "animation": "angry_guard"
+    },
+    {
       "id": "enraged",
       "health_threshold": 0.5,
       "animation": "angry_spin"
@@ -42,9 +49,5 @@
     "color": "GREEN",
     "overlay": "PROGRESS",
     "text": "Angry Boy"
-  },
-  "loot_table": "vitae:entities/angry_boy",
-  "on_death": {
-    "spawn_loot_chest": true
   }
 }

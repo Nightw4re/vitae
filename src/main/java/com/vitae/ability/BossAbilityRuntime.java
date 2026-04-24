@@ -90,7 +90,9 @@ public final class BossAbilityRuntime {
                         false,
                         false,
                         true,
-                        0.6D
+                        0.6D,
+                        null,
+                        1.0D
                 );
                 executor.execute(caster, caster.getTarget(), new AbilityDefinition(
                         "spin_slash",

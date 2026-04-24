@@ -5,12 +5,10 @@ import com.vitae.ability.executor.CarryTargetExecutor;
 import com.vitae.ability.BossAbilityRuntime;
 import com.vitae.effect.VitaeEffectHooks;
 import com.vitae.entity.VitaeBossBar;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import com.vitae.phase.PhaseLockController;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -19,19 +17,23 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.monster.Vindicator;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
-import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.entity.raid.Raid;
 
 public class VitaeTestEntity extends Vindicator {
     private final VitaeBossBar bossBar;
     private final BossAbilityRuntime abilityRuntime = new BossAbilityRuntime();
     private final AbilityCastScheduler abilityScheduler = new AbilityCastScheduler();
+    private final PhaseLockController phaseLockController = new PhaseLockController();
     private boolean dragonDeathStarted;
     private boolean castLocked;
 
@@ -58,18 +60,38 @@ public class VitaeTestEntity extends Vindicator {
     }
 
     @Override
-    protected void customServerAiStep() {
-        castLocked = CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive();
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, SpawnGroupData spawnGroupData) {
+        SpawnGroupData data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+        setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+        setPersistenceRequired();
+        return data;
+    }
 
+    @Override
+    public void applyRaidBuffs(ServerLevel level, int wave, boolean unused) {
+        setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+    }
+
+    @Override
+    protected void customServerAiStep() {
         super.customServerAiStep();
+
+        phaseLockController.tick(this, VitaeDemoDefinition.testEntityDefinition());
+        castLocked = CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive() || phaseLockController.isSummonLockActive();
 
         bossBar.setProgress(getHealth() / getMaxHealth());
         CarryTargetExecutor.tick(this);
         if (CarryTargetExecutor.hasActiveGrab(this)) {
+            getNavigation().stop();
+            setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+            setAggressive(false);
             return;
         }
-        abilityScheduler.tick(this, VitaeDemoDefinition.testEntityDefinition());
-        if (!abilityScheduler.isCasting()) {
+        if (!phaseLockController.isSummonLockActive()) {
+            abilityScheduler.tick(this, VitaeDemoDefinition.testEntityDefinition());
+        }
+        if (!abilityScheduler.isCasting() && !phaseLockController.isSummonLockActive()) {
             abilityRuntime.tick(this, VitaeDemoDefinition.testEntityDefinition());
         }
 
@@ -99,10 +121,21 @@ public class VitaeTestEntity extends Vindicator {
 
     @Override
     public boolean doHurtTarget(net.minecraft.world.entity.Entity entity) {
-        if (CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive()) {
+        if (CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive() || phaseLockController.isSummonLockActive()) {
             return false;
         }
         return super.doHurtTarget(entity);
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        return super.hurt(source, amount);
+    }
+
+    @Override
+    public void die(DamageSource damageSource) {
+        bossBar.setProgress(0.0F);
+        super.die(damageSource);
     }
 
     @Override
@@ -127,12 +160,12 @@ public class VitaeTestEntity extends Vindicator {
     protected void tickDeath() {
         deathTime++;
         CarryTargetExecutor.forceReset(this);
+        bossBar.setProgress(0.0F);
         if (!dragonDeathStarted) {
             dragonDeathStarted = true;
             level().globalLevelEvent(1028, blockPosition(), 0);
             level().playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_DEATH, SoundSource.HOSTILE, 5.0F, 1.0F);
             VitaeEffectHooks.playDeathBurst(level(), this);
-            spawnLootChestIfConfigured();
         }
 
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel && deathTime % 10 == 0) {
@@ -148,36 +181,12 @@ public class VitaeTestEntity extends Vindicator {
         return VitaeDemoDefinition.testEntityDefinition().xpRewardOrDefault();
     }
 
-    private void spawnLootChestIfConfigured() {
-        var definition = VitaeDemoDefinition.testEntityDefinition();
-        if (definition.deathBehavior() == null || !definition.deathBehavior().spawnLootChest()) {
-            return;
-        }
-        if (!(level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-        String lootTableId = definition.lootTable();
-        if (lootTableId == null || lootTableId.isBlank()) {
-            lootTableId = "vitae:entities/angry_boy";
-        }
+    public double currentSummonLockFloorOrDefault() {
+        return VitaeDemoDefinition.testEntityDefinition().nextPhaseHealthFloorOrDefault(getHealth() / getMaxHealth());
+    }
 
-        BlockPos chestPos = blockPosition().above();
-        if (!serverLevel.getBlockState(chestPos).isAir()) {
-            chestPos = blockPosition();
-        }
-        if (!serverLevel.getBlockState(chestPos).isAir()) {
-            return;
-        }
-
-        serverLevel.setBlock(chestPos, Blocks.CHEST.defaultBlockState(), 3);
-        BlockEntity blockEntity = serverLevel.getBlockEntity(chestPos);
-        if (!(blockEntity instanceof ChestBlockEntity chest)) {
-            return;
-        }
-
-        ResourceKey<LootTable> lootKey = ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.parse(lootTableId));
-        chest.setLootTable(lootKey, serverLevel.getRandom().nextLong());
-        chest.unpackLootTable(null);
+    public boolean isSummonLockActive() {
+        return phaseLockController.isSummonLockActive();
     }
 
     private void applyConfiguredEquipment() {
@@ -190,4 +199,5 @@ public class VitaeTestEntity extends Vindicator {
         var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(mainHandItem));
         setItemSlot(EquipmentSlot.MAINHAND, item == null ? ItemStack.EMPTY : new ItemStack(item));
     }
+
 }

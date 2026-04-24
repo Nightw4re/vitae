@@ -24,6 +24,7 @@ public final class VitaeDemoDefinition {
                 "armor": 0
               },
               "abilities": [
+                { "id": "vitae:guard_summon" },
                 { "id": "vitae:vex_grab", "cooldown_ticks": "200" },
                 { "id": "vitae:spin_slash" },
                 { "id": "melee_attack" }
@@ -33,6 +34,11 @@ public final class VitaeDemoDefinition {
                   "id": "normal",
                   "health_threshold": 1.0,
                   "animation": "angry_idle"
+                },
+                {
+                  "id": "guarded",
+                  "health_threshold": 0.75,
+                  "animation": "angry_guard"
                 },
                 {
                   "id": "enraged",
@@ -45,10 +51,6 @@ public final class VitaeDemoDefinition {
                 "overlay": "progress",
                 "text": "Angry Boy"
               },
-              "on_death": {
-                "spawn_loot_chest": true
-              },
-              "loot_table": "vitae:entities/angry_boy",
               "combat": {
                 "basic_melee_enabled": true,
                 "basic_melee_cooldown_ticks": 20,
@@ -60,7 +62,8 @@ public final class VitaeDemoDefinition {
               },
               "equipment": {
                 "main_hand": null
-              }
+              },
+              "hp_lock": [0.75]
             }
             """;
 
@@ -73,3 +76,4 @@ public final class VitaeDemoDefinition {
         return loaded != null ? loaded : FALLBACK_DEFINITION;
     }
 }
+

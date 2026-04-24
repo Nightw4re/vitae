@@ -61,8 +61,26 @@ public final class AbilityDefinitionLoader {
                 getBoolean(p, "invulnerable", false),
                 getBoolean(p, "no_ai", false),
                 getBoolean(p, "interruptible", true),
-                getDouble(p, "height_offset", 0.6D)
+                getDouble(p, "height_offset", 0.6D),
+                parseSpawnPoints(p),
+                getDouble(p, "scale_multiplier", 1.0D)
         );
+    }
+
+    private static List<SpawnPointDefinition> parseSpawnPoints(JsonObject obj) {
+        if (!obj.has("spawn_points")) {
+            return List.of();
+        }
+        JsonArray arr = obj.getAsJsonArray("spawn_points");
+        List<SpawnPointDefinition> points = new ArrayList<>(arr.size());
+        for (JsonElement el : arr) {
+            JsonObject point = el.getAsJsonObject();
+            double x = getDouble(point, "x", 0.0D);
+            double z = getDouble(point, "z", 0.0D);
+            double y = getDouble(point, "y", 0.0D);
+            points.add(new SpawnPointDefinition(x, z, y));
+        }
+        return List.copyOf(points);
     }
 
     private static List<AbilityStepDefinition> parseAbilitySteps(JsonObject obj) {
