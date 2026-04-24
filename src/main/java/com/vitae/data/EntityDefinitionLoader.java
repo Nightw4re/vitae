@@ -25,6 +25,8 @@ public final class EntityDefinitionLoader {
         String animations = requireString(root, "animations");
         int xpReward = (int) getDouble(root, "xp_reward", -1.0);
         String lootTable = getString(root, "loot_table", null);
+        String playerLootTable = getString(root, "loot_table_player", null);
+        String genericLootTable = getString(root, "loot_table_generic", null);
         String introAnimation = getString(root, "intro_animation", null);
         String spawnStructure = getString(root, "spawn_structure", null);
 
@@ -40,7 +42,7 @@ public final class EntityDefinitionLoader {
         PhaseLockDefinition summonLock = parseRootSummonLock(root);
         SpawnRules spawnRules = parseSpawnRules(root);
 
-        return new EntityDefinition(model, animations, attributes, phases, abilities, xpReward, lootTable,
+        return new EntityDefinition(model, animations, attributes, phases, abilities, xpReward, lootTable, playerLootTable, genericLootTable,
                 introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, hpLocks, summonLock, spawnStructure, spawnRules);
     }
 

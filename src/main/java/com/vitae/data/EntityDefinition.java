@@ -17,6 +17,8 @@ public record EntityDefinition(
         List<AbilityReference> abilities,
         int xpReward,
         String lootTable,
+        String playerLootTable,
+        String genericLootTable,
         String introAnimation,
         DeathBehavior deathBehavior,
         ResetBehavior resetBehavior,
@@ -28,6 +30,28 @@ public record EntityDefinition(
         String spawnStructure,
         SpawnRules spawnRules
 ) {
+    public EntityDefinition(
+            String model,
+            String animations,
+            AttributeDefinition attributes,
+            List<PhaseDefinition> phases,
+            List<AbilityReference> abilities,
+            int xpReward,
+            String lootTable,
+            String introAnimation,
+            DeathBehavior deathBehavior,
+            ResetBehavior resetBehavior,
+            BossBarDefinition bossBar,
+            CombatDefinition combat,
+            EquipmentDefinition equipment,
+            List<Double> hpLocks,
+            PhaseLockDefinition summonLock,
+            String spawnStructure,
+            SpawnRules spawnRules
+    ) {
+        this(model, animations, attributes, phases, abilities, xpReward, lootTable, null, null, introAnimation,
+                deathBehavior, resetBehavior, bossBar, combat, equipment, hpLocks, summonLock, spawnStructure, spawnRules);
+    }
 
     /**
      * Returns the active phase for the given health percentage (0.0–1.0).
@@ -62,6 +86,20 @@ public record EntityDefinition(
 
     public int xpRewardOrDefault() {
         return xpReward >= 0 ? xpReward : 0;
+    }
+
+    public String lootTableOrDefault() {
+        return lootTable;
+    }
+
+    public String lootTableForDeath(boolean killedByPlayer) {
+        if (killedByPlayer && playerLootTable != null && !playerLootTable.isBlank()) {
+            return playerLootTable;
+        }
+        if (genericLootTable != null && !genericLootTable.isBlank()) {
+            return genericLootTable;
+        }
+        return lootTable;
     }
 
     public CombatDefinition combatOrDefault() {

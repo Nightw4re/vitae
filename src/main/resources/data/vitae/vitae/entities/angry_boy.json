@@ -1,6 +1,7 @@
 {
   "model": "vitae:geo/angry_boy.geo.json",
   "animations": "vitae:animations/angry_boy.animation.json",
+  "loot_table": "vitae:entities/angry_boy",
   "xp_reward": 30,
   "attributes": {
     "max_health": 12,
@@ -23,7 +24,6 @@
   },
   "hp_lock": [0.75],
   "abilities": [
-    { "id": "vitae:guard_summon" },
     { "id": "vitae:vex_grab", "cooldown_ticks": "200" },
     { "id": "vitae:spin_slash" },
     { "id": "melee_attack" }
@@ -49,9 +49,5 @@
     "color": "GREEN",
     "overlay": "PROGRESS",
     "text": "Angry Boy"
-  },
-  "loot_table": "vitae:entities/angry_boy",
-  "on_death": {
-    "spawn_loot_chest": true
   }
 }

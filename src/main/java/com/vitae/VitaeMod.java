@@ -9,19 +9,18 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.core.registries.Registries;
 import com.vitae.entity.VitaeMob;
 
@@ -36,12 +35,40 @@ public class VitaeMod {
         VitaeContent.ITEMS.register(modEventBus);
         VitaeContent.BLOCK_ENTITY_TYPES.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(this::onLivingDrops);
         NeoForge.EVENT_BUS.addListener(this::onEntityJoinLevel);
         NeoForge.EVENT_BUS.addListener(this::onLivingIncomingDamage);
     }
 
     private void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(VitaeRegistry.get());
+    }
+
+    private void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof com.vitae.demo.VitaeTestEntity entity) || !(entity.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        event.getDrops().clear();
+        EntityDefinition definition = VitaeRegistry.get().getEntity(net.minecraft.world.entity.EntityType.getKey(entity.getType()));
+        if (definition == null) {
+            return;
+        }
+        String lootTableId = definition.lootTableForDeath(event.getSource().getEntity() instanceof Player);
+        if (lootTableId == null || lootTableId.isBlank()) {
+            return;
+        }
+        var lootTable = VitaeRegistry.get().getLootTable(ResourceLocation.parse(lootTableId));
+        if (lootTable == null) {
+            return;
+        }
+        var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(serverLevel)
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.THIS_ENTITY, entity)
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, entity.position())
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.DAMAGE_SOURCE, event.getSource())
+                .withOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ATTACKING_ENTITY, event.getSource().getEntity())
+                .withOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.DIRECT_ATTACKING_ENTITY, event.getSource().getDirectEntity())
+                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.ENTITY);
+        lootTable.getRandomItems(params).forEach(stack -> event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(serverLevel, entity.getX(), entity.getY(), entity.getZ(), stack)));
     }
 
     private void onEntityJoinLevel(EntityJoinLevelEvent event) {

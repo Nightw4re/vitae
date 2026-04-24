@@ -1,12 +1,12 @@
 {
-  "type": "minecraft:generic",
+  "type": "minecraft:entity",
   "pools": [
     {
       "rolls": 1,
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "vitae:angry_boy_spawn_egg"
+          "name": "minecraft:calcite"
         }
       ]
     }
