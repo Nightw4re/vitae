@@ -70,6 +70,22 @@ jobs:
       - name: Build
         run: gradle build --no-daemon
 
+      - name: Validate release payload
+        run: |
+          JAR="build/libs/vitae-neoforge-${{ env.MC_VERSION }}-${{ needs.version_check.outputs.current }}.jar"
+          if [ ! -f "$JAR" ]; then
+            echo "Expected release jar not found: $JAR"
+            exit 1
+          fi
+          if [ ! -s "$JAR" ]; then
+            echo "Release jar is empty: $JAR"
+            exit 1
+          fi
+          if [ -z "${{ steps.changelog.outputs.content }}" ]; then
+            echo "Changelog is empty"
+            exit 1
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
