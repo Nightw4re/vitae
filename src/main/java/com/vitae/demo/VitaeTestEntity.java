@@ -134,6 +134,7 @@ public class VitaeTestEntity extends Vindicator {
 
     @Override
     public void die(DamageSource damageSource) {
+        bossBar.setProgress(0.0F);
         super.die(damageSource);
     }
 
@@ -159,6 +160,7 @@ public class VitaeTestEntity extends Vindicator {
     protected void tickDeath() {
         deathTime++;
         CarryTargetExecutor.forceReset(this);
+        bossBar.setProgress(0.0F);
         if (!dragonDeathStarted) {
             dragonDeathStarted = true;
             level().globalLevelEvent(1028, blockPosition(), 0);
