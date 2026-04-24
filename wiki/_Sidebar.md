@@ -1,6 +1,7 @@
 * [Home](Home)
 * [Getting Started](Getting-Started)
 * [Entity Definitions](Entity-Definitions)
+* [Loot Definitions](Loot-Definitions)
 * [Ability System](Ability-System)
 * [Spawn Rules](Spawn-Rules)
 * [Demo Content](Demo-Content)

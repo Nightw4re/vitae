@@ -4,6 +4,7 @@ Vitae is a data-driven framework for custom Minecraft entities on NeoForge 1.21.
 
 Use this wiki as the project reference for:
 - entity JSON schema
+- loot definitions
 - ability composition
 - boss phases and transitions
 - demo content
@@ -14,6 +15,7 @@ Use this wiki as the project reference for:
 
 - [Getting Started](Getting-Started)
 - [Entity Definitions](Entity-Definitions)
+- [Loot Definitions](Loot-Definitions)
 - [Ability System](Ability-System)
 - [Spawn Rules](Spawn-Rules)
 - [Demo Content](Demo-Content)
