@@ -4,6 +4,8 @@ public final class TestRunner {
     private static final String[] TESTS = {
             "com.vitae.data.EntityDefinitionTest",
             "com.vitae.data.AbilityModifierParserTest",
+            "com.vitae.data.SpawnFormationUtilTest",
+            "com.vitae.data.BossDamagePolicyTest",
             "com.vitae.data.GrabTimelineTest",
             "com.vitae.phase.PhaseManagerTest",
             "com.vitae.ability.AbilityCooldownTrackerTest",

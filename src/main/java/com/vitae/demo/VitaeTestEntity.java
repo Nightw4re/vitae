@@ -5,6 +5,7 @@ import com.vitae.ability.executor.CarryTargetExecutor;
 import com.vitae.ability.BossAbilityRuntime;
 import com.vitae.effect.VitaeEffectHooks;
 import com.vitae.entity.VitaeBossBar;
+import com.vitae.phase.PhaseLockController;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.particles.ParticleTypes;
@@ -32,6 +33,7 @@ public class VitaeTestEntity extends Vindicator {
     private final VitaeBossBar bossBar;
     private final BossAbilityRuntime abilityRuntime = new BossAbilityRuntime();
     private final AbilityCastScheduler abilityScheduler = new AbilityCastScheduler();
+    private final PhaseLockController phaseLockController = new PhaseLockController();
     private boolean dragonDeathStarted;
     private boolean castLocked;
 
@@ -59,17 +61,23 @@ public class VitaeTestEntity extends Vindicator {
 
     @Override
     protected void customServerAiStep() {
-        castLocked = CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive();
-
         super.customServerAiStep();
+
+        phaseLockController.tick(this, VitaeDemoDefinition.testEntityDefinition());
+        castLocked = CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive() || phaseLockController.isSummonLockActive();
 
         bossBar.setProgress(getHealth() / getMaxHealth());
         CarryTargetExecutor.tick(this);
         if (CarryTargetExecutor.hasActiveGrab(this)) {
+            getNavigation().stop();
+            setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+            setAggressive(false);
             return;
         }
-        abilityScheduler.tick(this, VitaeDemoDefinition.testEntityDefinition());
-        if (!abilityScheduler.isCasting()) {
+        if (!phaseLockController.isSummonLockActive()) {
+            abilityScheduler.tick(this, VitaeDemoDefinition.testEntityDefinition());
+        }
+        if (!abilityScheduler.isCasting() && !phaseLockController.isSummonLockActive()) {
             abilityRuntime.tick(this, VitaeDemoDefinition.testEntityDefinition());
         }
 
@@ -99,7 +107,7 @@ public class VitaeTestEntity extends Vindicator {
 
     @Override
     public boolean doHurtTarget(net.minecraft.world.entity.Entity entity) {
-        if (CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive()) {
+        if (CarryTargetExecutor.hasActiveGrab(this) || abilityScheduler.isCasting() || abilityRuntime.isSpinActive() || phaseLockController.isSummonLockActive()) {
             return false;
         }
         return super.doHurtTarget(entity);
@@ -146,6 +154,14 @@ public class VitaeTestEntity extends Vindicator {
 
     public int getExperienceReward() {
         return VitaeDemoDefinition.testEntityDefinition().xpRewardOrDefault();
+    }
+
+    public double currentSummonLockFloorOrDefault() {
+        return VitaeDemoDefinition.testEntityDefinition().nextPhaseHealthFloorOrDefault(getHealth() / getMaxHealth());
+    }
+
+    public boolean isSummonLockActive() {
+        return phaseLockController.isSummonLockActive();
     }
 
     private void spawnLootChestIfConfigured() {

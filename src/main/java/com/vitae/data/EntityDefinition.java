@@ -23,6 +23,8 @@ public record EntityDefinition(
         BossBarDefinition bossBar,
         CombatDefinition combat,
         EquipmentDefinition equipment,
+        List<Double> hpLocks,
+        PhaseLockDefinition summonLock,
         String spawnStructure,
         SpawnRules spawnRules
 ) {
@@ -64,6 +66,18 @@ public record EntityDefinition(
 
     public CombatDefinition combatOrDefault() {
         return combat != null ? combat : CombatDefinition.defaults();
+    }
+
+    public List<Double> hpLocksOrDefault() {
+        return hpLocks != null ? hpLocks : List.of();
+    }
+
+    public PhaseLockDefinition summonLockOrDefault() {
+        return summonLock;
+    }
+
+    public boolean hasHpLockThreshold(double threshold) {
+        return hpLocksOrDefault().stream().anyMatch(lock -> Double.compare(lock, threshold) == 0);
     }
 
     public List<AbilityReference> abilitiesOrDefault() {
@@ -114,6 +128,39 @@ public record EntityDefinition(
 
     public boolean hasNaturalSpawnRestrictions() {
         return !isBoss() && (hasSpawnStructure() || spawnRulesOrDefault().hasAnyRestrictions());
+    }
+
+    public double maxPhaseHealthFloorOrDefault() {
+        List<Double> locks = hpLocksOrDefault();
+        if (!locks.isEmpty()) {
+            return locks.stream().mapToDouble(Double::doubleValue).max().orElse(0.0D);
+        }
+        if (phases == null || phases.isEmpty()) {
+            return 0.0D;
+        }
+        return phases.stream()
+                .mapToDouble(PhaseDefinition::healthFloorPercent)
+                .max()
+                .orElse(0.0D);
+    }
+
+    public double nextPhaseHealthFloorOrDefault(double currentHealthPercent) {
+        List<Double> locks = hpLocksOrDefault();
+        if (!locks.isEmpty()) {
+            return locks.stream()
+                    .filter(lock -> lock < currentHealthPercent)
+                    .mapToDouble(Double::doubleValue)
+                    .max()
+                    .orElse(0.0D);
+        }
+        if (phases == null || phases.isEmpty()) {
+            return 0.0D;
+        }
+        return phases.stream()
+                .filter(phase -> phase != null && phase.healthThreshold() < currentHealthPercent && phase.hasHealthFloor())
+                .mapToDouble(PhaseDefinition::healthFloorPercent)
+                .max()
+                .orElse(0.0D);
     }
 
     public boolean canSpawnInBiome(String biomeId) {

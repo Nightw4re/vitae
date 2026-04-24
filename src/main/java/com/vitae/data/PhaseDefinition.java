@@ -11,20 +11,24 @@ import java.util.List;
  *
  * @param id              unique identifier for this phase
  * @param healthThreshold fraction of max health at which this phase activates (0.0–1.0)
+ * @param healthFloorPercent minimum health fraction enforced while this phase's summon lock is active
  * @param abilities       list of ability references active during this phase
  * @param animation       idle/loop animation name for this phase (nullable = use default)
  * @param model           optional GeckoLib model override for this phase (nullable = use entity default)
  * @param scale           optional scale multiplier for this phase (1.0 = normal size)
  * @param transition      optional transition definition played when entering this phase
+ * @param lock            optional summon-lock definition for this phase
  */
 public record PhaseDefinition(
         String id,
         double healthThreshold,
+        double healthFloorPercent,
         List<AbilityReference> abilities,
         String animation,
         String model,
         double scale,
-        PhaseTransitionDefinition transition
+        PhaseTransitionDefinition transition,
+        PhaseLockDefinition lock
 ) {
     public static final double DEFAULT_SCALE = 1.0;
 
@@ -36,5 +40,9 @@ public record PhaseDefinition(
     /** Returns true if this phase has a transition animation configured. */
     public boolean hasTransition() {
         return transition != null;
+    }
+
+    public boolean hasHealthFloor() {
+        return healthFloorPercent > 0.0D;
     }
 }

@@ -3,6 +3,7 @@ package com.vitae.entity;
 import com.vitae.animation.VitaeAnimationController;
 import com.vitae.data.EntityDefinition;
 import com.vitae.data.PhaseDefinition;
+import com.vitae.phase.PhaseLockController;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
@@ -21,6 +22,7 @@ public class VitaeMob extends PathfinderMob implements GeoEntity {
 
     private final EntityDefinition definition;
     private final AnimatableInstanceCache animatableCache = GeckoLibUtil.createInstanceCache(this);
+    private final PhaseLockController phaseLockController = new PhaseLockController();
     private int introAnimationTicksRemaining;
 
     protected VitaeMob(EntityType<? extends VitaeMob> type, Level level, EntityDefinition definition) {
@@ -50,12 +52,26 @@ public class VitaeMob extends PathfinderMob implements GeoEntity {
         if (introAnimationTicksRemaining > 0) {
             introAnimationTicksRemaining--;
         }
+        phaseLockController.tick(this, definition);
     }
 
     /** Returns the currently active phase based on the entity's health percentage. */
     public PhaseDefinition getCurrentPhase() {
         float healthPercent = this.getHealth() / this.getMaxHealth();
         return definition.getPhaseForHealth(healthPercent);
+    }
+
+    public boolean isPhaseLocked() {
+        return phaseLockController.isLocked();
+    }
+
+    public boolean isSummonLockActive() {
+        return phaseLockController.isSummonLockActive();
+    }
+
+    public double currentSummonLockFloorOrDefault() {
+        double healthPercent = this.getHealth() / this.getMaxHealth();
+        return definition.nextPhaseHealthFloorOrDefault(healthPercent);
     }
 
     @Override

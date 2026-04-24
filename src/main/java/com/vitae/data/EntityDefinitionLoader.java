@@ -36,10 +36,12 @@ public final class EntityDefinitionLoader {
         BossBarDefinition bossBar = parseBossBar(root);
         CombatDefinition combat = parseCombat(root);
         EquipmentDefinition equipment = parseEquipment(root);
+        List<Double> hpLocks = parseHpLocks(root);
+        PhaseLockDefinition summonLock = parseRootSummonLock(root);
         SpawnRules spawnRules = parseSpawnRules(root);
 
         return new EntityDefinition(model, animations, attributes, phases, abilities, xpReward, lootTable,
-                introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, spawnStructure, spawnRules);
+                introAnimation, deathBehavior, resetBehavior, bossBar, combat, equipment, hpLocks, summonLock, spawnStructure, spawnRules);
     }
 
     private static AttributeDefinition parseAttributes(JsonObject root) {
@@ -67,9 +69,32 @@ public final class EntityDefinitionLoader {
             String model = getString(p, "model", null);
             double scale = getDouble(p, "scale", PhaseDefinition.DEFAULT_SCALE);
             PhaseTransitionDefinition transition = parseTransition(p);
-            phases.add(new PhaseDefinition(id, threshold, List.of(), animation, model, scale, transition));
+            PhaseLockDefinition lock = parsePhaseLock(p);
+            upsertPhase(phases, new PhaseDefinition(id, threshold, parseHealthFloor(p), List.of(), animation, model, scale, transition, lock));
         }
         return List.copyOf(phases);
+    }
+
+    private static void upsertPhase(List<PhaseDefinition> phases, PhaseDefinition next) {
+        for (int i = 0; i < phases.size(); i++) {
+            PhaseDefinition existing = phases.get(i);
+            if (!existing.id().equals(next.id())) {
+                continue;
+            }
+            phases.set(i, new PhaseDefinition(
+                    existing.id(),
+                    Math.max(existing.healthThreshold(), next.healthThreshold()),
+                    Math.max(existing.healthFloorPercent(), next.healthFloorPercent()),
+                    existing.abilities().isEmpty() ? next.abilities() : existing.abilities(),
+                    next.animation() != null ? next.animation() : existing.animation(),
+                    next.model() != null ? next.model() : existing.model(),
+                    next.scale() != PhaseDefinition.DEFAULT_SCALE ? next.scale() : existing.scale(),
+                    next.transition() != null ? next.transition() : existing.transition(),
+                    next.lock() != null ? next.lock() : existing.lock()
+            ));
+            return;
+        }
+        phases.add(next);
     }
 
     private static List<AbilityReference> parseAbilityReferences(JsonObject root) {
@@ -96,6 +121,84 @@ public final class EntityDefinitionLoader {
         boolean invulnerable = getBoolean(t, "invulnerable", false);
         int durationTicks = (int) getDouble(t, "duration_ticks", PhaseTransitionDefinition.USE_ANIMATION_LENGTH);
         return new PhaseTransitionDefinition(animation, invulnerable, durationTicks);
+    }
+
+    private static PhaseLockDefinition parsePhaseLock(JsonObject phase) {
+        JsonObject l = null;
+        if (phase.has("summon")) {
+            l = phase.getAsJsonObject("summon");
+        } else 
+        if (phase.has("phase_lock")) {
+            l = phase.getAsJsonObject("phase_lock");
+        } else if (phase.has("lock")) {
+            l = phase.getAsJsonObject("lock");
+        }
+        if (l == null) return null;
+        String summonEntity = getString(l, "summon_entity", null);
+        int summonCount = (int) getDouble(l, "summon_count", 0.0);
+        if (summonCount < 0) {
+            summonCount = 0;
+        }
+        return new PhaseLockDefinition(
+                summonEntity,
+                summonCount,
+                getBoolean(l, "invulnerable_while_summons_alive", getBoolean(l, "invulnerable", true))
+        );
+    }
+
+    private static List<Double> parseHpLocks(JsonObject root) {
+        if (!root.has("hp_lock")) {
+            return List.of();
+        }
+        JsonElement element = root.get("hp_lock");
+        List<Double> locks = new ArrayList<>();
+        if (element.isJsonArray()) {
+            for (JsonElement el : element.getAsJsonArray()) {
+                locks.add(el.getAsDouble());
+            }
+            return List.copyOf(locks);
+        }
+        if (element.isJsonPrimitive()) {
+            locks.add(element.getAsDouble());
+            return List.copyOf(locks);
+        }
+        return List.of();
+    }
+
+    private static PhaseLockDefinition parseRootSummonLock(JsonObject root) {
+        JsonObject lock = null;
+        if (root.has("guard_summon")) {
+            lock = root.getAsJsonObject("guard_summon");
+        } else if (root.has("summon_lock")) {
+            lock = root.getAsJsonObject("summon_lock");
+        } else if (root.has("phase_lock")) {
+            lock = root.getAsJsonObject("phase_lock");
+        }
+        if (lock == null) {
+            return null;
+        }
+        String summonEntity = getString(lock, "summon_entity", null);
+        int summonCount = (int) getDouble(lock, "summon_count", 0.0);
+        if (summonCount < 0) {
+            summonCount = 0;
+        }
+        return new PhaseLockDefinition(
+                summonEntity,
+                summonCount,
+                getBoolean(lock, "invulnerable_while_summons_alive", getBoolean(lock, "invulnerable", true))
+        );
+    }
+
+    private static double parseHealthFloor(JsonObject phase) {
+        if (phase.has("hp_lock")) {
+            JsonElement hpLock = phase.get("hp_lock");
+            if (hpLock.isJsonObject()) {
+                JsonObject lock = hpLock.getAsJsonObject();
+                return getDouble(lock, "percent", getDouble(lock, "value", 0.0));
+            }
+            return hpLock.getAsDouble();
+        }
+        return getDouble(phase, "health_floor_percent", 0.0);
     }
 
     private static DeathBehavior parseDeathBehavior(JsonObject root) {

@@ -19,6 +19,10 @@ public final class EntityDefinitionTest {
         testAbilityReferenceLookupSupportsNamespacedAndShortIds();
         testNaturalSpawnRules();
         testBossIgnoresNaturalSpawnRules();
+        testPhaseLockDefinition();
+        testMaxPhaseHealthFloor();
+        testNextPhaseHealthFloor();
+        testHpLockThresholdLookup();
     }
 
     private static void testIsBossWithMultiplePhases() {
@@ -102,6 +106,8 @@ public final class EntityDefinitionTest {
                 null,
                 CombatDefinition.defaults(),
                 EquipmentDefinition.defaults(),
+                List.of(),
+                null,
                 null,
                 SpawnRules.defaults()
         );
@@ -127,6 +133,8 @@ public final class EntityDefinitionTest {
                 null,
                 CombatDefinition.defaults(),
                 EquipmentDefinition.defaults(),
+                List.of(),
+                null,
                 null,
                 new SpawnRules(List.of("minecraft:plains", "minecraft:forest"), List.of("minecraft:ancient_city"), 4, 2, 1)
         );
@@ -144,8 +152,8 @@ public final class EntityDefinitionTest {
                 "animations",
                 AttributeDefinition.defaults(),
                 List.of(
-                        new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null),
-                        new PhaseDefinition("phase_2", 0.5, List.of(), null, null, 1.0, null)
+                        new PhaseDefinition("phase_1", 1.0, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("phase_2", 0.5, 0.0, List.of(), null, null, 1.0, null, null)
                 ),
                 List.of(),
                 0,
@@ -156,6 +164,8 @@ public final class EntityDefinitionTest {
                 null,
                 CombatDefinition.defaults(),
                 EquipmentDefinition.defaults(),
+                List.of(),
+                null,
                 null,
                 new SpawnRules(List.of("minecraft:plains"), List.of("minecraft:ancient_city"), 1, 1, 1)
         );
@@ -164,12 +174,109 @@ public final class EntityDefinitionTest {
         TestAssertions.assertFalse(def.hasNaturalSpawnRestrictions());
     }
 
+    private static void testPhaseLockDefinition() {
+        PhaseLockDefinition lock = new PhaseLockDefinition("minecraft:vindicator", 4, true);
+        PhaseDefinition phase = new PhaseDefinition("enraged", 0.5, 0.75, List.of(), null, null, 1.0, null, lock);
+        TestAssertions.assertNotNull(phase.lock());
+        TestAssertions.assertEquals("minecraft:vindicator", phase.lock().summonEntity());
+        TestAssertions.assertEquals(4, phase.lock().summonCount());
+        TestAssertions.assertTrue(phase.lock().invulnerableWhileSummonsAlive());
+        TestAssertions.assertEquals(0.75, phase.healthFloorPercent());
+    }
+
+    private static void testMaxPhaseHealthFloor() {
+        EntityDefinition def = new EntityDefinition(
+                "model",
+                "animations",
+                AttributeDefinition.defaults(),
+                List.of(
+                        new PhaseDefinition("normal", 1.0, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("guarded", 0.75, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("enraged", 0.5, 0.0, List.of(), null, null, 1.0, null, null)
+                ),
+                List.of(),
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CombatDefinition.defaults(),
+                EquipmentDefinition.defaults(),
+                List.of(0.75),
+                null,
+                null,
+                SpawnRules.defaults()
+        );
+
+        TestAssertions.assertEquals(0.75, def.maxPhaseHealthFloorOrDefault());
+    }
+
+    private static void testNextPhaseHealthFloor() {
+        EntityDefinition def = new EntityDefinition(
+                "model",
+                "animations",
+                AttributeDefinition.defaults(),
+                List.of(
+                        new PhaseDefinition("normal", 1.0, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("guarded", 0.75, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("enraged", 0.5, 0.0, List.of(), null, null, 1.0, null, null)
+                ),
+                List.of(),
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CombatDefinition.defaults(),
+                EquipmentDefinition.defaults(),
+                List.of(0.75, 0.5),
+                null,
+                null,
+                SpawnRules.defaults()
+        );
+
+        TestAssertions.assertEquals(0.75, def.nextPhaseHealthFloorOrDefault(1.0));
+        TestAssertions.assertEquals(0.5, def.nextPhaseHealthFloorOrDefault(0.74));
+        TestAssertions.assertEquals(0.0, def.nextPhaseHealthFloorOrDefault(0.5));
+    }
+
+    private static void testHpLockThresholdLookup() {
+        EntityDefinition def = new EntityDefinition(
+                "model",
+                "animations",
+                AttributeDefinition.defaults(),
+                List.of(
+                        new PhaseDefinition("normal", 1.0, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("guarded", 0.75, 0.0, List.of(), null, null, 1.0, null, null),
+                        new PhaseDefinition("enraged", 0.5, 0.0, List.of(), null, null, 1.0, null, null)
+                ),
+                List.of(),
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CombatDefinition.defaults(),
+                EquipmentDefinition.defaults(),
+                List.of(0.75),
+                new PhaseLockDefinition("minecraft:zombie", 4, true),
+                null,
+                SpawnRules.defaults()
+        );
+
+        TestAssertions.assertTrue(def.hasHpLockThreshold(0.75));
+        TestAssertions.assertFalse(def.hasHpLockThreshold(0.5));
+    }
+
     // --- Helpers ---
 
     private static EntityDefinition twoPhaseEntity() {
         List<PhaseDefinition> phases = List.of(
-                new PhaseDefinition("phase_1", 1.0, List.of(new AbilityReference("melee_attack", null), new AbilityReference("summon", null)), null, null, 1.0, null),
-                new PhaseDefinition("phase_2", 0.5, List.of(new AbilityReference("staff_beam", null), new AbilityReference("melee_attack", null)), null, null, 1.0, null)
+                        new PhaseDefinition("phase_1", 1.0, 0.0, List.of(new AbilityReference("melee_attack", null), new AbilityReference("summon", null)), null, null, 1.0, null, null),
+                        new PhaseDefinition("phase_2", 0.5, 0.0, List.of(new AbilityReference("staff_beam", null), new AbilityReference("melee_attack", null)), null, null, 1.0, null, null)
         );
         return new EntityDefinition(
                 "mypack:geo/test.geo.json",
@@ -179,7 +286,7 @@ public final class EntityDefinitionTest {
                 List.of(),
                 30,
                 "mypack:entities/test",
-                null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
+                null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), List.of(), null, null, SpawnRules.defaults()
         );
     }
 
@@ -188,10 +295,10 @@ public final class EntityDefinitionTest {
                 "mypack:geo/test.geo.json",
                 "mypack:animations/test.animation.json",
                 AttributeDefinition.defaults(),
-                List.of(new PhaseDefinition("phase_1", 1.0, List.of(), null, null, 1.0, null)),
+                List.of(new PhaseDefinition("phase_1", 1.0, 0.0, List.of(), null, null, 1.0, null, null)),
                 List.of(),
                 0,
-                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
+                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), List.of(), null, null, SpawnRules.defaults()
         );
     }
 
@@ -203,7 +310,8 @@ public final class EntityDefinitionTest {
                 List.of(),
                 List.of(),
                 0,
-                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), null, SpawnRules.defaults()
+                null, null, null, null, null, CombatDefinition.defaults(), EquipmentDefinition.defaults(), List.of(), null, null, SpawnRules.defaults()
         );
     }
 }
+
